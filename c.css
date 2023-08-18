@@ -1,0 +1,114 @@
+:root {
+    --textColor: #cfd3d9;
+    --bg: #343541;
+    --darkBg: #202123;
+}
+
+body {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 400px;
+    height: 400px;
+    font-size: 14px;
+    background: var(--bg);
+}
+
+#chatContainer {
+    flex-grow: 1;
+    white-space: break-spaces;
+    font-size: large;
+    max-width: 500px;
+    overflow: auto;
+    color: var(--textColor);
+}
+
+textarea {
+    max-height: 200px;
+    flex-grow: 1;
+    resize: none;
+    outline: none;
+    padding: 15px 10px 15px 10px;
+    font-size: inherit;
+    font-family: monospace;
+    background: var(--darkBg);
+}
+
+.chatInputWrap {
+    background: var(--darkBg);
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+#chatSubmitBtn {
+    font-size: xx-large;
+    font-weight: bolder;
+    color: #585861;
+    padding: 0 10px 0 10px;
+    cursor: pointer;
+    background: inherit;
+}
+
+#chatSubmitBtn:hover {
+    color: white;
+}
+
+.responseWrap {
+    background: #444654;
+    padding: 1rem 0 1rem 0;
+}
+
+#error:not(:empty) {
+    background: red;
+    text-align: center;
+    padding: 0.5rem;
+    font-size: large;
+}
+
+* {
+    box-sizing: border-box;
+    border: none;
+}
+
+*:visited {
+    color: var(--textColor);
+}
+
+input, textarea {
+    color: var(--textColor);
+}
+
+#modal {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    top: 40%;
+    width: 100%;
+    background: var(--darkBg);
+    padding: 1rem;
+    color: var(--textColor);
+}
+
+#modal div {
+    width: 100%;
+    font-size: small;
+    margin-bottom: 0.3rem;
+}
+
+#modal input {
+    background: var(--bg);
+    flex-grow: 1;
+    margin-right: 0.5rem;
+}
+
+#modal button {
+    background: none;
+    cursor: pointer;
+    font-weight: bold;
+    color: inherit;
+}
+
+#modal button:hover {
+    color: white;
+}

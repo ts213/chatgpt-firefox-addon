@@ -1,0 +1,14 @@
+{
+  "manifest_version": 2,
+  "name": "Chat GPT addon",
+  "version": "1.0",
+  "browser_action": {
+    "default_popup": "h.html"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "icons": {
+    "48": "icon.svg"
+  }
+}
