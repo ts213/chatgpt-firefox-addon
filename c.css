@@ -2,23 +2,24 @@
     --textColor: #cfd3d9;
     --bg: #343541;
     --darkBg: #202123;
+    --textColorDim: #585861;
 }
 
 body {
     position: relative;
     display: flex;
     flex-direction: column;
-    width: 400px;
-    height: 400px;
+    width: 800px;
+    height: 600px;
     font-size: 14px;
     background: var(--bg);
+    margin: 0;
 }
 
 #chatContainer {
     flex-grow: 1;
     white-space: break-spaces;
     font-size: large;
-    max-width: 500px;
     overflow: auto;
     color: var(--textColor);
 }
@@ -44,7 +45,7 @@ textarea {
 #chatSubmitBtn {
     font-size: xx-large;
     font-weight: bolder;
-    color: #585861;
+    color: var(--textColorDim);
     padding: 0 10px 0 10px;
     cursor: pointer;
     background: inherit;
@@ -54,9 +55,13 @@ textarea {
     color: white;
 }
 
-.responseWrap {
+.response {
     background: #444654;
     padding: 1rem 0 1rem 0;
+}
+
+.question, .response {
+    padding: 1rem;
 }
 
 #error:not(:empty) {

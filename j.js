@@ -11,12 +11,12 @@ const decoder = new TextDecoder();
 browser.storage.local.get('chatGptKey').then(storage => window.APIKey = storage.chatGptKey);
 
 const messagesHistory = [];
-messagesHistory.limit = 20;
+messagesHistory.limit = 30;
 
 async function onSubmit(e) {
   e.preventDefault();
   if (renderReply.rendering) return;
-  if (!window.APIKey) if (!await promptForAPIKey()) return;
+  if (!window.APIKey) if (!await promptForKey()) return;
 
   const textContent = e.target.text.value.trim();
   if (!textContent.length) return;
@@ -26,33 +26,10 @@ async function onSubmit(e) {
   updateChatHistory({ role: 'assistant' });
 }
 
-function promptForAPIKey() {
-  if (document.getElementById('modal')) return;
+function promptForKey() {
+  if (document.getElementById('modal')) return false;
 
-  let resolve;
-  const promise = new Promise(res => resolve = res);
-
-  document.body.insertAdjacentHTML('afterbegin',
-    `<div id='modal'>
-        <div>
-        You need API
-          <a style='font-weight: bolder' target='_blank' href='https://platform.openai.com/account/api-keys'>key</a>
-        to make requests to ChatGPT API  
-        </div>
-        <input id='apiKeyInput' placeholder='API key' autofocus />
-        <button id='modalSubmitBtn'>Save</button>
-      </div>`
-  );
-  document.getElementById('modalSubmitBtn').addEventListener('click', function() {
-    window.APIKey = document.getElementById('apiKeyInput').value?.trim();
-    if (!window.APIKey) return;
-    browser.storage.local.set({ 'chatGptKey': window.APIKey });
-
-    resolve(true);
-    this.closest('#modal').remove();
-  });
-
-  return promise;
+  return new Promise(resolve => waitModalConfirmation(resolve));
 }
 
 async function renderReply() {
@@ -60,18 +37,16 @@ async function renderReply() {
   const response = await fetchAPI()
     .catch(handleError).finally(() => renderReply.rendering = false);
   const reader = response.body.getReader();
-  const responseContainer = createContainer();
+  const responseMsg = CreateChatMessage('assistant');
   document.getElementById('tArea').value = '';
 
   while (true) {
     const { value, done } = await reader.read();
-    if (done) {
-      break;
-    }
+    if (done) break;
 
     const parsedString = parseResponse(value);
     for (const char of parsedString) {
-      responseContainer.innerText += char ?? '';
+      responseMsg.innerText += char ?? '';
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
   }
@@ -92,7 +67,30 @@ function parseResponse(value) {
 
       acc += textContent;
     } catch {} finally { return acc;}
+
   }, '');
+}
+
+function waitModalConfirmation(resolve) {
+  document.body.insertAdjacentHTML('afterbegin',
+    `<div id='modal'>
+        <div>
+        You need API
+          <a style='font-weight: bolder' target='_blank' href='https://platform.openai.com/account/api-keys'>key</a>
+        to make requests to ChatGPT API  
+        </div>
+        <input id='apiKeyInput' placeholder='API key' autofocus />
+        <button id='modalSubmitBtn'>Save</button>
+      </div>`
+  );
+  document.getElementById('modalSubmitBtn').addEventListener('click', function () {
+    window.APIKey = document.getElementById('apiKeyInput').value?.trim();
+    if (!window.APIKey) return;
+
+    browser.storage.local.set({ 'chatGptKey': window.APIKey });
+    resolve(true);
+    this.closest('#modal').remove();
+  });
 }
 
 function updateChatHistory({ role, textContent = undefined }) {
@@ -102,11 +100,12 @@ function updateChatHistory({ role, textContent = undefined }) {
 
   switch (role) {
     case 'user':
-      chatContainer.append(textContent);
+      const questionMsg = CreateChatMessage('user');
+      questionMsg.innerText = textContent + '\n';
       messagesHistory.push({ role, content: textContent, });
       break;
     case 'assistant':
-      const lastQuestion = Array.from(document.querySelectorAll('.responseWrap')).pop().innerText;
+      const lastQuestion = Array.from(document.querySelectorAll('.response')).pop().innerText;
       messagesHistory.push({ role, content: lastQuestion ?? '', },);
       break;
   }
@@ -136,7 +135,7 @@ function handleError(e) {
     case '401':
       errorText = 'Invalid API key';
       browser.storage.local.remove('chatGptKey');
-      window.APIKey = '';
+      delete window.APIKey;
       break;
     case '400':
       errorText = 'Server error';
@@ -144,15 +143,18 @@ function handleError(e) {
     // case MNOGO
   }
   errorDiv.innerText = errorText;
+  messagesHistory.pop();
   setTimeout(() => errorDiv.innerText = '', 6000);
   throw e;
 }
 
-function createContainer() {
-  const responseWrap = document.createElement('div');
-  responseWrap.className = 'responseWrap';
-  chatContainer.append(responseWrap);
-  return responseWrap;
+function CreateChatMessage(type) {
+  const element = document.createElement('div');
+  element.className = type === 'user'
+    ? 'question'
+    : 'response';
+  chatContainer.append(element);
+  return element;
 }
 
 function onTextareaInput() {
