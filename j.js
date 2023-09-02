@@ -8,7 +8,7 @@ document.getElementById('tArea').addEventListener('keydown',
 const chatContainer = document.getElementById('chatContainer');
 const errorDiv = document.getElementById('error');
 const decoder = new TextDecoder();
-browser.storage.local.get('chatGptKey').then(storage => window.APIKey = storage.chatGptKey);
+browser.storage.local.get('chatGptKey').then(storage => window.apiKey = storage.chatGptKey);
 
 const messagesHistory = [];
 messagesHistory.limit = 30;
@@ -16,7 +16,7 @@ messagesHistory.limit = 30;
 async function onSubmit(e) {
   e.preventDefault();
   if (renderReply.rendering) return;
-  if (!window.APIKey) if (!await promptForKey()) return;
+  if (!window.apiKey) if (!await promptForKey()) return;
 
   const textContent = e.target.text.value.trim();
   if (!textContent.length) return;
@@ -84,10 +84,10 @@ function waitModalConfirmation(resolve) {
       </div>`
   );
   document.getElementById('modalSubmitBtn').addEventListener('click', function () {
-    window.APIKey = document.getElementById('apiKeyInput').value?.trim();
-    if (!window.APIKey) return;
+    window.apiKey = document.getElementById('apiKeyInput').value?.trim();
+    if (!window.apiKey) return;
 
-    browser.storage.local.set({ 'chatGptKey': window.APIKey });
+    browser.storage.local.set({ 'chatGptKey': window.apiKey });
     resolve(true);
     this.closest('#modal').remove();
   });
@@ -115,7 +115,7 @@ async function fetchAPI() {
   return fetch('https://api.openai.com/v1/chat/completions', {
     'headers': {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${window.APIKey}`,
+      'Authorization': `Bearer ${window.apiKey}`,
     },
     'body': JSON.stringify({
       'model': 'gpt-3.5-turbo',
@@ -135,12 +135,13 @@ function handleError(e) {
     case '401':
       errorText = 'Invalid API key';
       browser.storage.local.remove('chatGptKey');
-      delete window.APIKey;
+      delete window.apiKey;
       break;
     case '400':
       errorText = 'Server error';
       break;
-    // case MNOGO
+    case '429':
+      errorText = 'Too many requests or quota exceeded';
   }
   errorDiv.innerText = errorText;
   messagesHistory.pop();
