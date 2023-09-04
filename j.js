@@ -1,22 +1,25 @@
 'use strict';
-document.getElementById('form').addEventListener('submit', onSubmit);
-document.getElementById('tArea').addEventListener('input', onTextareaInput);
-document.getElementById('tArea').addEventListener('keydown',
+
+let apiKey;
+let autoScroll = true;
+const decoder = new TextDecoder();
+const messagesHistory = []; messagesHistory.limit = 30;
+const [errorDiv, chatContainer, chatForm, chatInput] = getElementsById(['error', 'chatContainer', 'chatForm', 'chatInput']);
+browser.storage.local.get('chatGptKey').then(storage => apiKey = storage.chatGptKey);
+
+chatContainer.addEventListener('scroll', function autoScrollWhenFullyBottomScrolled() {
+  autoScroll = (this.scrollHeight - this.scrollTop) === this.clientHeight;
+});
+chatForm.addEventListener('submit', submitForm);
+chatInput.addEventListener('input', changeInputHeight);
+chatInput.addEventListener('keydown',
   ev => ev.key === 'Enter' && (ev.preventDefault(), ev.target.form.requestSubmit())
 );
 
-const chatContainer = document.getElementById('chatContainer');
-const errorDiv = document.getElementById('error');
-const decoder = new TextDecoder();
-browser.storage.local.get('chatGptKey').then(storage => window.apiKey = storage.chatGptKey);
-
-const messagesHistory = [];
-messagesHistory.limit = 30;
-
-async function onSubmit(e) {
+async function submitForm(e) {
   e.preventDefault();
   if (renderReply.rendering) return;
-  if (!window.apiKey) if (!await promptForKey()) return;
+  if (!apiKey) if (!await promptForKey()) return;
 
   const textContent = e.target.text.value.trim();
   if (!textContent.length) return;
@@ -27,8 +30,9 @@ async function onSubmit(e) {
 }
 
 function promptForKey() {
-  if (document.getElementById('modal')) return false;
-
+  if (document.getElementById('modal')) {
+    return false;
+  }
   return new Promise(resolve => waitModalConfirmation(resolve));
 }
 
@@ -38,7 +42,7 @@ async function renderReply() {
     .catch(handleError).finally(() => renderReply.rendering = false);
   const reader = response.body.getReader();
   const responseMsg = CreateChatMessage('assistant');
-  document.getElementById('tArea').value = '';
+  chatInput.value = '';
 
   while (true) {
     const { value, done } = await reader.read();
@@ -47,7 +51,7 @@ async function renderReply() {
     const parsedString = parseResponse(value);
     for (const char of parsedString) {
       responseMsg.innerText += char ?? '';
-      chatContainer.scrollTop = chatContainer.scrollHeight;
+      if (autoScroll) scrollChatDown();
     }
   }
 }
@@ -84,10 +88,10 @@ function waitModalConfirmation(resolve) {
       </div>`
   );
   document.getElementById('modalSubmitBtn').addEventListener('click', function () {
-    window.apiKey = document.getElementById('apiKeyInput').value?.trim();
-    if (!window.apiKey) return;
+    apiKey = document.getElementById('apiKeyInput').value?.trim();
+    if (!apiKey) return;
 
-    browser.storage.local.set({ 'chatGptKey': window.apiKey });
+    browser.storage.local.set({ 'chatGptKey': apiKey });
     resolve(true);
     this.closest('#modal').remove();
   });
@@ -115,7 +119,7 @@ async function fetchAPI() {
   return fetch('https://api.openai.com/v1/chat/completions', {
     'headers': {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${window.apiKey}`,
+      'Authorization': `Bearer ${apiKey}`,
     },
     'body': JSON.stringify({
       'model': 'gpt-3.5-turbo',
@@ -129,13 +133,13 @@ async function fetchAPI() {
   });
 }
 
-function handleError(e) {
+function handleError(err) {
   let errorText = 'An error occured';
-  switch (e.message) {
+  switch (err.message) {
     case '401':
       errorText = 'Invalid API key';
       browser.storage.local.remove('chatGptKey');
-      delete window.apiKey;
+      apiKey = null;
       break;
     case '400':
       errorText = 'Server error';
@@ -146,7 +150,7 @@ function handleError(e) {
   errorDiv.innerText = errorText;
   messagesHistory.pop();
   setTimeout(() => errorDiv.innerText = '', 6000);
-  throw e;
+  throw err;
 }
 
 function CreateChatMessage(type) {
@@ -158,7 +162,18 @@ function CreateChatMessage(type) {
   return element;
 }
 
-function onTextareaInput() {
+function changeInputHeight() {
   this.style.height = '';
   this.style.height = this.scrollHeight + 'px';
+  scrollChatDown();
+}
+
+function getElementsById(idList = []) {
+  return idList.reduce((acc, id) =>
+      [...acc, document.getElementById(id)],
+    []).filter(Boolean);
+}
+
+function scrollChatDown() {
+  chatContainer.scrollTop = chatContainer.scrollHeight;
 }
